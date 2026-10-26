@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>مصروفاتي اليومية</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1f4fd8">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef2f4;--surface:#fff;--ink:#17252e;--muted:#5d6f7a;--line:#d5dde1;--accent:#1f4fd8;--accent-ink:#fff;--danger:#b3261e;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10181d;--surface:#17232a;--ink:#e6eef2;--muted:#93a6b1;--line:#2a3a43;--accent:#6f93ff;--accent-ink:#0b1220;--danger:#ff8a80;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#10181d;--surface:#17232a;--ink:#e6eef2;--muted:#93a6b1;--line:#2a3a43;--accent:#6f93ff;--accent-ink:#0b1220;--danger:#ff8a80;color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans Arabic",Tahoma,Arial,sans-serif;line-height:1.7;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+main{max-width:720px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:1.5rem;margin:8px 0 16px}
+h2{font-size:1.05rem;margin:0 0 12px}
+section{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+.sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sum div{border-inline-start:3px solid var(--accent);padding-inline-start:10px}
+.sum small{color:var(--muted);display:block;font-size:.8rem}
+.sum b{font-size:1.15rem;font-variant-numeric:tabular-nums}
+form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:flex;flex-direction:column;font-size:.85rem;color:var(--muted);gap:4px}
+label.full{grid-column:1/-1}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.add{grid-column:1/-1;font:inherit;font-weight:700;background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:11px;cursor:pointer}
+.bar{display:grid;grid-template-columns:70px 1fr auto;gap:10px;align-items:center;margin:8px 0;font-size:.9rem}
+.track{height:10px;background:var(--bg);border-radius:5px;overflow:hidden}
+.fill{height:100%;background:var(--accent);border-radius:5px}
+.day{display:flex;justify-content:space-between;color:var(--muted);font-size:.85rem;border-bottom:1px solid var(--line);padding:10px 0 4px;margin-top:6px}
+.row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.row .t{flex:1;min-width:0}
+.row .t span{display:block;color:var(--muted);font-size:.8rem;overflow-wrap:anywhere}
+.row .a{font-variant-numeric:tabular-nums;font-weight:500}
+.row button{background:none;border:0;color:var(--danger);font:inherit;cursor:pointer;padding:4px 8px}
+.empty{color:var(--muted);text-align:center;padding:12px 0;margin:0}
+.tools{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center}
+.tools button{font:inherit;font-size:.85rem;background:none;color:var(--muted);border:1px solid var(--line);border-radius:8px;padding:5px 10px;cursor:pointer}
+@media (max-width:420px){.sum{grid-template-columns:1fr}form{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<h1>مصروفاتي اليومية</h1>
+
+<section class="sum" aria-label="الملخص">
+  <div><small>اليوم</small><b id="sToday">0</b></div>
+  <div><small>هذا الشهر</small><b id="sMonth">0</b></div>
+  <div><small>عدد العمليات هذا الشهر</small><b id="sCount">0</b></div>
+</section>
+
+<section>
+  <h2>إضافة مصروف</h2>
+  <form id="f">
+    <label>المبلغ (دينار)<input id="amount" type="number" min="1" step="any" inputmode="decimal" required></label>
+    <label>التصنيف
+      <select id="cat">
+        <option>طعام</option><option>مواصلات</option><option>دراسة</option>
+        <option>اتصالات</option><option>ترفيه</option><option>أخرى</option>
+      </select>
+    </label>
+    <label>التاريخ<input id="date" type="date" required></label>
+    <label>ملاحظة (اختياري)<input id="note" type="text" maxlength="80"></label>
+    <button class="add" type="submit">حفظ المصروف</button>
+  </form>
+</section>
+
+<section>
+  <h2>توزيع مصروفات هذا الشهر</h2>
+  <div id="cats"></div>
+</section>
+
+<section>
+  <div class="tools">
+    <h2 style="margin:0">السجل</h2>
+    <button id="clear" type="button">مسح كل البيانات</button>
+  </div>
+  <div id="list"></div>
+</section>
+</main>
+
+<script>
+(function(){
+  var KEY="expenses-v1", items=[];
+  var $=function(id){return document.getElementById(id)};
+  function load(){try{var r=localStorage.getItem(KEY);items=r?JSON.parse(r):[]}catch(e){items=[]}}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(items))}catch(e){}}
+  function fmt(n){return Math.round(n).toLocaleString("en-US")+" د.ع"}
+  function today(){var d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
+  function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+
+  function render(){
+    var t=today(), m=t.slice(0,7), sT=0, sM=0, cnt=0, byCat={};
+    items.forEach(function(x){
+      if(x.date===t) sT+=x.amount;
+      if(x.date.slice(0,7)===m){sM+=x.amount;cnt++;byCat[x.cat]=(byCat[x.cat]||0)+x.amount}
+    });
+    $("sToday").textContent=fmt(sT);
+    $("sMonth").textContent=fmt(sM);
+    $("sCount").textContent=cnt;
+
+    var cats=$("cats"); cats.textContent="";
+    var keys=Object.keys(byCat).sort(function(a,b){return byCat[b]-byCat[a]});
+    if(!keys.length) cats.appendChild(el("p","empty","لا توجد مصروفات هذا الشهر بعد."));
+    keys.forEach(function(k){
+      var r=el("div","bar"), tr=el("div","track"), fl=el("div","fill");
+      fl.style.width=(byCat[k]/sM*100).toFixed(1)+"%";
+      tr.appendChild(fl);
+      r.appendChild(el("span",null,k)); r.appendChild(tr); r.appendChild(el("span",null,fmt(byCat[k])));
+      cats.appendChild(r);
+    });
+
+    var list=$("list"); list.textContent="";
+    if(!items.length){list.appendChild(el("p","empty","سجّل أول مصروف من النموذج أعلاه."));return}
+    var sorted=items.slice().sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:b.id-a.id});
+    var dayTotals={};
+    sorted.forEach(function(x){dayTotals[x.date]=(dayTotals[x.date]||0)+x.amount});
+    var last="";
+    sorted.forEach(function(x){
+      if(x.date!==last){
+        last=x.date;
+        var h=el("div","day"); h.appendChild(el("span",null,x.date)); h.appendChild(el("span",null,fmt(dayTotals[x.date])));
+        list.appendChild(h);
+      }
+      var r=el("div","row"), tx=el("div","t",x.cat);
+      if(x.note) tx.appendChild(el("span",null,x.note));
+      var a=el("div","a",fmt(x.amount));
+      var d=el("button",null,"حذف"); d.type="button"; d.setAttribute("aria-label","حذف المصروف");
+      d.onclick=function(){items=items.filter(function(i){return i.id!==x.id});save();render()};
+      r.appendChild(tx); r.appendChild(a); r.appendChild(d);
+      list.appendChild(r);
+    });
+  }
+
+  $("f").addEventListener("submit",function(e){
+    e.preventDefault();
+    var amt=parseFloat($("amount").value);
+    if(!(amt>0)) return;
+    items.push({id:Date.now(),amount:amt,cat:$("cat").value,date:$("date").value,note:$("note").value.trim()});
+    save();
+    $("amount").value="";$("note").value="";$("amount").focus();
+    render();
+  });
+  $("clear").onclick=function(){
+    if(items.length&&confirm("هل تريد حذف كل المصروفات نهائياً؟")){items=[];save();render()}
+  };
+
+  $("date").value=today();
+  load();render();
+})();
+if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
+</script>
+</body>
+</html>
